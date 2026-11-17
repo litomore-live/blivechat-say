@@ -1,0 +1,8 @@
+{
+  "name": "原生语音播报",
+  "version": "0.1.0",
+  "author": "LitoMore",
+  "description": "系统原生语音播报，支持弹幕、进场和关注。配置位于 ~/.config/blivechat-say/config.json，保存后自动加载。",
+  "run": "node src/index.js",
+  "enabled": false
+}

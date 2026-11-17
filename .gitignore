@@ -1,0 +1,7 @@
+node_modules/
+config.json
+user-voices.json
+.DS_Store
+bridge/runtime-status.json
+bridge/runtime-status.tmp
+__pycache__/

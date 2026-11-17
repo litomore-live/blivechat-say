@@ -1,0 +1,23 @@
+{
+  "name": "blivechat-say",
+  "version": "0.1.0",
+  "description": "blivechat native text-to-speech plugin for macOS and Windows",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "start": "node src/index.js",
+    "voices": "node src/index.js --voices",
+    "install:plugin": "node scripts/install.mjs",
+    "check": "node src/index.js --check",
+    "test": "node --test",
+    "config:init": "node src/index.js --init-config"
+  },
+  "dependencies": {
+    "native-say": "0.0.4",
+    "ws": "^8.18.0"
+  }
+}
