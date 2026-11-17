@@ -1,26 +1,42 @@
 # blivechat-say
 
-使用本地 [voices](../voices)（封装 [native-say](https://github.com/LitoMore/native-say) 与 Siri 音色）为 [blivechat](https://github.com/xfgryujk/blivechat) 提供系统原生语音播报。macOS 调用内置 `say` 或 Swift / AVSpeechSynthesizer，Windows 调用 PowerShell / SpeechSynthesizer，无需云端 TTS 服务。
+使用 [LitoMove Live Voices](https://github.com/litomore-live/voices)（封装 [native-say](https://github.com/LitoMore/native-say) 与 Siri 音色）为 [blivechat](https://github.com/xfgryujk/blivechat) 提供系统原生语音播报。该项目是需要单独克隆的独立仓库，运行时以 `voices` 为目录名放在本项目的同级目录。macOS 调用内置 `say` 或 Swift / AVSpeechSynthesizer，Windows 调用 PowerShell / SpeechSynthesizer，无需云端 TTS 服务。
 
 ## 环境
 
-- Node.js 22 或更新版本。
+- Node.js 24 或更新版本（LitoMove Live Voices 的要求）。
 - macOS 或 Windows，已安装想使用的系统声音。
 - 支持插件系统的 blivechat；当前按插件 SDK 1.x 协议实现。
 - 插件与音频输出运行在 **blivechat 后端所在的电脑**。Docker、远程服务器不会直接在你的 Mac 上发声。
 
 ## 安装与试听
 
-在本项目目录运行：
+先将两个仓库克隆到同一父目录：
 
 ```sh
+git clone https://github.com/litomore-live/voices.git
+git clone https://github.com/litomore-live/blivechat-say.git
+```
+
+目录应为：
+
+```text
+同一父目录/
+├── voices/
+└── blivechat-say/
+```
+
+如果已有 `blivechat-say`，只需在它的父目录克隆 LitoMove Live Voices。然后在 `blivechat-say` 目录运行：
+
+```sh
+npm ci --prefix ../voices
 npm ci
 npm run config:init
 npm run voices
 npm start -- --test "你好，语音播报测试。"
 ```
 
-此本地版本要求相邻的 `../voices` 项目，先在该目录运行 `npm ci`；macOS 使用 Siri 声音还需要 Xcode Command Line Tools 提供的 Swift。无需发布到 npm 或运行 `npm link`。
+当前代码直接从 `../voices/src/index.js` 加载语音模块，两个仓库都需要安装依赖；macOS 使用 Siri 声音还需要 Xcode Command Line Tools 提供的 Swift。无需发布到 npm 或运行 `npm link`。
 
 `npm run config:init` 会创建 `~/.config/blivechat-say/config.json`；Windows 使用用户主目录下的 `.config\blivechat-say\config.json`。设置了绝对路径的 `XDG_CONFIG_HOME` 时，使用 `$XDG_CONFIG_HOME/blivechat-say/config.json`。`npm run voices` 会列出本机安装的声音；将声音的完整 `name` 或 `identifier` 填入配置的 `default.voice`，空字符串使用系统默认声音。macOS 中文声音可在系统设置的辅助功能相关语音设置中下载；以本机列出的名字为准。
 
@@ -34,16 +50,21 @@ npm run install:plugin
 
 脚本在 blivechat 插件目录创建启用状态的 `plugin.json`，使用当前 Node 和本项目入口的绝对路径。项目保留在原位置，不需要复制依赖。自定义宿主位置可用 `npm run install:plugin -- --blivechat /path/to/blivechat`；加 `--dry-run` 可预览写入内容。安装后重启 blivechat 一次。
 
-将整个项目放在 `blivechat/data/plugins/blivechat-say/` 下，并在这个目录运行 `npm ci`。目录应为：
+手动安装时，将整个项目放在 `blivechat/data/plugins/blivechat-say/` 下，同时将 LitoMove Live Voices 放在 `blivechat/data/plugins/voices/` 下，并分别在两个项目目录运行 `npm ci`。目录应为：
 
 ```text
-blivechat/data/plugins/blivechat-say/
-├── plugin.json
-├── package.json
-├── package-lock.json
-├── config.example.json
-├── src/
-└── node_modules/
+blivechat/data/plugins/
+├── voices/
+│   ├── package.json
+│   ├── src/
+│   └── node_modules/
+└── blivechat-say/
+    ├── plugin.json
+    ├── package.json
+    ├── package-lock.json
+    ├── config.example.json
+    ├── src/
+    └── node_modules/
 ```
 
 macOS 本地开发也可以保持项目在当前位置，通过符号链接注册（替换成实际路径）：
@@ -164,7 +185,7 @@ macOS 中先停止原有的 blivechat，再从本项目运行：
 
 适配器测试：`python3 -B -m unittest discover -s bridge -p 'test_*.py'`。
 
-自动中断检查已关闭。停止插件时，通过本地 `voices` 的 `killRunningSay()` 终止当前播报；Swift 只停止本模块的进程，原生 `say` 仍使用 `native-say` 的停止机制。
+自动中断检查已关闭。停止插件时，通过本地 LitoMove Live Voices 的 `killRunningSay()` 终止当前播报；Swift 只停止本模块的进程，原生 `say` 仍使用 `native-say` 的停止机制。
 
 ## 开发与检查
 
