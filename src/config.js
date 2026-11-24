@@ -37,6 +37,9 @@ export function validateConfig(input, platform = process.platform) {
     if (!speechKeys.includes(key)) throw new Error(`未知默认声音配置项：${key}`);
   }
   if (typeof config.followWebFallback !== 'boolean') throw new Error('followWebFallback 必须是布尔值');
+  if (!Array.isArray(config.ignoredEnterUsers) || !config.ignoredEnterUsers.every(name => typeof name === 'string' && name.trim())) {
+    throw new Error('ignoredEnterUsers 必须是非空用户名组成的数组');
+  }
   for (const key of ['voice', 'audioDevice']) {
     if (typeof config.default[key] !== 'string') throw new Error(`default.${key} 必须是字符串`);
   }

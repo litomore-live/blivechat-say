@@ -72,6 +72,9 @@ test('initializes absent directories and rejects invalid legacy configs before c
 });
 
 test('validates nested fields and installed names, identifiers and aliases', async () => {
+  for (const ignoredEnterUsers of ['小明', null, ['小明', 42], ['  ']]) {
+    assert.throws(() => validateConfig({ignoredEnterUsers}), /ignoredEnterUsers/u);
+  }
   for (const invalid of [[], null, 42, {voice: 'Tingting'}, {default: []}, {default: {typo: 1}},
     {users: []}, {users: {'小明': 'Meijia'}}, {users: {'小明': {}}}, {users: {'小明': {voice: ''}}},
     {users: {' ': {voice: 'Tingting'}}}, {users: {'小明': {voice: 'Tingting', rate: 10}}}]) {

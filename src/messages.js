@@ -24,6 +24,7 @@ export function formatMessage(message, config) {
   } else if (data && typeof data === 'object' && !Array.isArray(data)) {
     values = {author: data.authorName, content: data.content, price: data.price};
     if ([Command.FOLLOW, Command.ENTER, Command.LIKE].includes(message.cmd) && typeof data.authorName === 'string' && data.authorName.trim()) {
+      if (message.cmd === Command.ENTER && config.ignoredEnterUsers.includes(data.authorName)) return null;
       const key = {[Command.FOLLOW]: 'follow', [Command.ENTER]: 'enter', [Command.LIKE]: 'like'}[message.cmd];
       template = config.templates[key];
     } else if (message.cmd === Command.SUPER_CHAT && typeof data.content === 'string' && data.content.trim()) {

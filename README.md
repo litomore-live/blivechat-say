@@ -102,6 +102,7 @@ ln -s /path/to/blivechat-say /path/to/blivechat/data/plugins/blivechat-say
     "小明": {"voice": "Tingting (Chinese (China mainland))"},
     "小红": {"voice": "Meijia (Chinese (Taiwan))"}
   },
+  "ignoredEnterUsers": ["小明", "小红"],
   "templates": {
     "enter": "{author}进入了直播间",
     "follow": "{author}关注了直播间",
@@ -119,6 +120,7 @@ ln -s /path/to/blivechat-say /path/to/blivechat/data/plugins/blivechat-say
 | `default.audioDevice` | `""` | macOS 音频设备 ID 或名称，空值使用默认设备；可运行 `say --audio-device '?'` 查询 |
 | `default.volume` | `null` | 仅 Windows，0 到 100；macOS 调整系统音量 |
 | `users` | `{}` | 按完整用户名配置专属音色，每项为 `{"voice": "音色名称"}` |
+| `ignoredEnterUsers` | `[]` | 按完整显示名精确匹配，只跳过这些用户的进场播报。保存后对新收到的进场事件生效 |
 | `maxQueueSize` | `5` | 等待队列长度，不含当前播报；满时丢弃最旧的待播消息 |
 | `maxAgeSeconds` | `30` | 等待超过此秒数的消息不再播报 |
 | `maxLength` | `120` | 每条完整播报的最大字符数，超出截断并加省略号 |

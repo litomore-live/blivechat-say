@@ -6,6 +6,7 @@
     "volume": null
   },
   "users": {},
+  "ignoredEnterUsers": [],
   "maxQueueSize": 5,
   "maxAgeSeconds": 30,
   "maxLength": 120,

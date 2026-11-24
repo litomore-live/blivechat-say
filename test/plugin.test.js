@@ -71,6 +71,16 @@ for (const [cmd, template, text] of [[Command.FOLLOW, 'follow', '小明关注了
   });
 }
 
+test('skips only entry announcements for exact names in ignoredEnterUsers', () => {
+  const config = validateConfig({ignoredEnterUsers: ['小明', '小红']});
+  const enter = authorName => formatMessage({cmd: Command.ENTER, data: {authorName}}, config);
+  assert.equal(enter('小明'), null);
+  assert.equal(enter('小红'), null);
+  assert.equal(enter('小明同学'), '小明同学进入了直播间');
+  assert.equal(formatMessage(danmaku(), config), '小明说，你好');
+  assert.equal(formatMessage({cmd: Command.FOLLOW, data: {authorName: '小明'}}, config), '小明关注了直播间');
+});
+
 test('serializes speech, drops oldest pending messages, survives failures and stops pending work', async () => {
   const spoken = [];
   const errors = [];
