@@ -43,7 +43,8 @@ async function main() {
     const stop = () => { void killRunningSay().finally(() => process.exit(0)); };
     process.once('SIGINT', stop);
     process.once('SIGTERM', stop);
-    await speakAnnouncement({text, language: detectLanguage(text)}, {config, catalog, say});
+    const language = detectLanguage(text);
+    await speakAnnouncement({text, language, contentLanguage: language}, {config, catalog, say});
     return;
   }
   let queue;

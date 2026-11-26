@@ -1,4 +1,4 @@
-import {announcementLanguage, detectLanguage} from './voice-selection.js';
+import {announcementLanguage, detectLanguage, hasLocalizedAnnouncement} from './voice-selection.js';
 
 // Wire format follows blcsdk/blcsdk/models.py, not the frontend chat protocol.
 export const Command = Object.freeze({HEARTBEAT: 0, INIT: 1, ADMIN: 5, TEXT: 50, GIFT: 51, MEMBER: 52, SUPER_CHAT: 53,
@@ -79,13 +79,17 @@ export function formatMessage(message, config) {
   const template = message.cmd === Command.GIFT ? phrases.gift : phrases[event];
   const values = {author, content, price: data.price, num: data.num ?? 1, gift: data.giftName,
     guard: phrases.ranks[data.privilegeType] ?? phrases.ranks[0]};
-  const text = cleanText(template.replace(/\{(\w+)\}/gu, (_, key) => String(values[key] ?? '')), config.maxLength);
+  const render = phrase => cleanText(phrase.replace(/\{(\w+)\}/gu, (_, key) => String(values[key] ?? '')), config.maxLength);
+  const text = render(template);
   const announcement = {text, author, language};
   if (englishEntry) announcement.autoSelectVoice = true;
-  // All built-in phrases start with the author. The connector belongs to the body.
-  if (nameLanguage && contentLanguage && nameLanguage !== contentLanguage &&
+  if (contentLanguage && !hasLocalizedAnnouncement(contentLanguage)) {
+    // Chat and Super Chat end with {content}. Keep the whole introduction together.
+    announcement.contentLanguage = contentLanguage;
+    announcement.prefixPart = {text: render(template.slice(0, template.indexOf('{content}')))};
+  } else if (nameLanguage && contentLanguage && nameLanguage !== contentLanguage &&
     nameLanguage !== 'en' && contentLanguage !== 'en' && announcements[nameLanguage] && announcements[contentLanguage]) {
-    announcement.namePart = {text: nameText, language: nameLanguage};
+    announcement.prefixPart = {text: nameText, language: nameLanguage};
   }
   return announcement;
 }

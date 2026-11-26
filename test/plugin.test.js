@@ -31,7 +31,6 @@ test('combines separately detected name and body languages for each announcement
     ['Alice', '你好', 'zh', 'Alice说，你好'],
     ['Alice', 'こんにちは', 'ja', 'Aliceさんが言いました。こんにちは'],
     ['Alice_42', '🎉', 'en', 'Alice_42 says, 🎉'],
-    ['Alice', 'Привет всем', 'ru', 'Alice说，Привет всем'],
     ['Привет', '你好', 'ru', 'Привет说，你好'],
   ]) {
     const message = danmaku(content);
@@ -46,6 +45,31 @@ test('combines separately detected name and body languages for each announcement
     ['민수', 'ko', '민수 님이 입장했습니다'],
   ]) {
     assert.deepEqual(formatMessage({cmd: Command.ENTER, data: {authorName: author}}, config), {text, language, author});
+  }
+});
+
+test('reads the introduction in the global voice and foreign content in a matching installed voice', async () => {
+  const catalog = createVoiceCatalog([
+    {name: 'Meijia', languageCode: 'zh_TW'}, {name: 'Yue', languageCode: 'zh_CN'},
+    {name: 'Majed', languageCode: 'ar_001'}, {name: 'French', culture: 'fr-FR'},
+  ]);
+  const users = {LitoMore: {voice: 'Yue'}};
+  const arabic = danmaku('الله أكبر');
+  arabic.data[2] = 'LitoMore';
+  const french = {cmd: Command.SUPER_CHAT, data: {authorName: 'LitoMore', content: 'Bonjour tout le monde', price: 30}};
+  for (const [message, maxLength, stopped, expected] of [
+    [arabic, 120, false, [['LitoMore说，', 'Meijia'], ['الله أكبر', 'Majed']]],
+    [french, 120, false, [['LitoMore发送了30元的醒目留言，', 'Meijia'], ['Bonjour tout le monde', 'French']]],
+    [arabic, 120, true, [['LitoMore说，', 'Meijia']]],
+    [arabic, 8, false, [['LitoMore…', 'Meijia']]],
+    [arabic, 13, false, [['LitoMore说，', 'Meijia'], ['الل…', 'Majed']]],
+    [danmaku('Привет всем'), 120, false, [['小明说，Привет всем', 'Meijia']]],
+  ]) {
+    const config = validateConfig({default: {voice: 'Meijia'}, users, maxLength});
+    const calls = [];
+    await speakAnnouncement(formatMessage(message, config), {config, catalog, isStopped: () => stopped,
+      say: (text, {voice}) => calls.push([text, voice])});
+    assert.deepEqual(calls, expected);
   }
 });
 

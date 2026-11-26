@@ -31,12 +31,16 @@ test('reads simplified and traditional Chinese in the selected Taiwanese or Cant
   }
 });
 
-test('tries later detectors for English and only selects fallbacks within the four supported languages', () => {
+test('looks up foreign content voices while keeping the global fallback for unlocalized announcements', () => {
   const catalog = createVoiceCatalog([
     {name: '中文', languageCode: 'zh_CN'}, {name: 'English', culture: 'en-US'}, {name: 'French', culture: 'fr-FR'},
+    {name: 'Québec', culture: 'fr-CA', quality: 'premium'}, {name: 'Arabic', culture: 'ar-SA', enabled: false},
   ]);
   assert.equal(catalog.select('中文', detectLanguage('hello world')), 'English');
   assert.equal(detectLanguage('Bonjour tout le monde'), 'fr');
+  assert.equal(catalog.match('FR_fr'), 'French');
+  assert.equal(catalog.match('fr'), 'Québec');
+  assert.equal(catalog.match('ar'), undefined);
   assert.equal(catalog.select('English', 'fr-FR', '中文'), '中文');
   assert.equal(catalog.select('French', 'en'), 'English');
 });

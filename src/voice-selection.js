@@ -5,6 +5,7 @@ import {detect as tinyLD} from 'raycast-language-detector/tinyld';
 
 const offlineDetectors = [franc, languageDetect, tinyLD];
 const supportedLanguages = new Set(['zh', 'en', 'ja', 'ko']);
+export const hasLocalizedAnnouncement = language => supportedLanguages.has(language);
 
 export function detectLanguage(text, {isName = false} = {}) {
   const letters = text.replace(/[^\p{L}]/gu, '');
@@ -76,23 +77,30 @@ export function createVoiceCatalog(voices) {
   for (const voice of available) {
     const locale = localeOf(voice);
     // As in Raycast Say, dialect variants remain selectable explicitly.
-    if (!locale || locale !== standardLocale(locale)) continue;
-    const language = locale.split('-')[0];
+    const code = standardLocale(locale);
+    if (!code) continue;
+    const language = code.split('-')[0];
+    if (supportedLanguages.has(language) && locale !== code) continue;
     const key = voice.identifier ?? voice.name;
-    if (!supportedLanguages.has(language)) continue;
-    if (!byLocale.has(locale)) byLocale.set(locale, key);
+    if (!byLocale.has(code)) byLocale.set(code, key);
     if (!byLanguage.has(language)) byLanguage.set(language, key);
+  }
+
+  function match(detectedCode) {
+    const code = standardLocale(normalize(detectedCode));
+    return byLocale.get(code) ?? byLanguage.get(code?.split('-')[0]);
   }
 
   return {
     has: key => languages.has(key),
+    match,
     select(preferred, detectedCode, defaultVoice = preferred) {
       const code = standardLocale(normalize(detectedCode));
       const language = code?.split('-')[0];
       if (language && !supportedLanguages.has(language)) return defaultVoice;
       const preferredLanguage = languages.get(preferred);
       if (!language || (preferred && !preferredLanguage) || preferredLanguage === language) return preferred;
-      return byLocale.get(code) ?? byLanguage.get(language) ?? preferred;
+      return match(detectedCode) ?? preferred;
     },
   };
 }
