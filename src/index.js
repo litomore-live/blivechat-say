@@ -1,11 +1,13 @@
 import {parseArgs} from 'node:util';
 import {resolve} from 'node:path';
 import {say, getVoices, killRunningSay} from '../../voices/src/index.js';
-import {defaultConfigPath, initializeConfig, loadConfig, speechOptions, validateVoices} from './config.js';
+import {defaultConfigPath, initializeConfig, loadConfig, validateVoices} from './config.js';
 import {watchConfig} from './watch-config.js';
 import {cleanText} from './messages.js';
 import {SpeechQueue} from './queue.js';
 import {connectPlugin} from './client.js';
+import {createVoiceCatalog, detectLanguage} from './voice-selection.js';
+import {speakAnnouncement} from './speech.js';
 
 async function main() {
   const {values} = parseArgs({options: {
@@ -30,7 +32,8 @@ async function main() {
   }
   if (values.check || values.test !== undefined) {
     const config = await loadConfig(path);
-    await validateVoices(config, getVoices);
+    const catalog = createVoiceCatalog(await getVoices());
+    validateVoices(config, catalog);
     if (values.check) {
       console.log(`配置检查通过：${path}`);
       return;
@@ -40,7 +43,7 @@ async function main() {
     const stop = () => { void killRunningSay().finally(() => process.exit(0)); };
     process.once('SIGINT', stop);
     process.once('SIGTERM', stop);
-    await say(text, speechOptions(config));
+    await speakAnnouncement({text, language: detectLanguage(text)}, {config, catalog, say});
     return;
   }
   let queue;
@@ -53,7 +56,9 @@ async function main() {
   }});
   queue = new SpeechQueue({
     ...settings.config,
-    speak: (text, author) => say(text, speechOptions(settings.config, process.platform, author)),
+    speak: announcement => speakAnnouncement(announcement, {
+      config: settings.config, catalog: settings.catalog, say, isStopped: () => queue.stopped,
+    }),
     cancel: killRunningSay,
     onError: error => console.error(`播报失败：${error.message}`),
   });

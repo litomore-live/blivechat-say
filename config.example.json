@@ -12,14 +12,14 @@
   "maxLength": 120,
   "roomIds": [],
   "followWebFallback": true,
-  "templates": {
-    "text": "{author}说，{content}",
-    "enter": "{author}进入了直播间",
-    "follow": "{author}关注了直播间",
-    "like": "{author}点赞了直播间",
-    "superChat": "{author}发送了{price}元的醒目留言，{content}",
-    "paidGift": "",
-    "freeGift": "",
-    "member": ""
+  "events": {
+    "text": true,
+    "enter": true,
+    "follow": true,
+    "like": true,
+    "superChat": true,
+    "paidGift": false,
+    "freeGift": false,
+    "member": false
   }
 }

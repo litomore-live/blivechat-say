@@ -62,10 +62,9 @@ export function connectPlugin({port, token, config, getConfig = () => config, co
       log(`请编辑 ${configPath}，保存后自动加载；followWebFallback 的修改需重启宿主`);
       return;
     }
-    const text = formatMessage(message, getConfig());
-    if (text) {
-      const author = message.cmd === Command.TEXT ? message.data[2] : message.data.authorName;
-      queue.enqueue(text, author, {allowRepeat: message.cmd === Command.GIFT});
+    const announcement = formatMessage(message, getConfig());
+    if (announcement) {
+      queue.enqueue(announcement, {allowRepeat: message.cmd === Command.GIFT});
       if ([Command.FOLLOW, Command.ENTER, Command.LIKE].includes(message.cmd)) {
         const label = {[Command.FOLLOW]: '关注', [Command.ENTER]: '进场', [Command.LIKE]: '点赞'}[message.cmd];
         socket.send(JSON.stringify({cmd: 30, data: {level: 20, msg: `${label}事件已接收并加入语音队列`}}));

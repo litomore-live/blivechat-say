@@ -1,5 +1,6 @@
 import {stat} from 'node:fs/promises';
 import {loadConfig, validateVoices} from './config.js';
+import {createVoiceCatalog} from './voice-selection.js';
 
 async function signature(path) {
   try {
@@ -14,6 +15,7 @@ async function signature(path) {
 export async function watchConfig({path, getVoices, intervalMs = 300, onChange = () => {},
   log = console.log, onError = console.error}) {
   let config;
+  let catalog;
   let closed = false;
   let checking = false;
   // Record metadata before reading so saves during the initial read are observed too.
@@ -21,9 +23,11 @@ export async function watchConfig({path, getVoices, intervalMs = 300, onChange =
 
   async function reload() {
     const next = await loadConfig(path);
-    await validateVoices(next, getVoices);
+    const nextCatalog = createVoiceCatalog(await getVoices());
+    validateVoices(next, nextCatalog);
     if (closed) return;
     config = next;
+    catalog = nextCatalog;
     onChange(next);
     log(`配置已加载：${path}（${Object.keys(config.users).length} 位用户）`);
   }
@@ -48,6 +52,7 @@ export async function watchConfig({path, getVoices, intervalMs = 300, onChange =
 
   return {
     get config() { return config; },
+    get catalog() { return catalog; },
     close() {
       closed = true;
       clearInterval(timer);

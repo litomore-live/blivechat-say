@@ -11,6 +11,7 @@ try {
   const host = await realpath(resolve(values.blivechat ?? join(dirname(source), 'blivechat')));
   await access(join(host, 'main.py'));
   await access(join(source, 'node_modules/native-say/package.json'));
+  await access(join(source, 'node_modules/raycast-language-detector/package.json'));
   await access(join(source, 'node_modules/ws/package.json'));
   await access(join(dirname(source), 'voices/src/index.js'));
   await access(join(dirname(source), 'voices/node_modules/native-say/package.json'));

@@ -18,6 +18,7 @@
   },
   "dependencies": {
     "native-say": "0.0.4",
+    "raycast-language-detector": "^0.2.4",
     "ws": "^8.18.0"
   }
 }

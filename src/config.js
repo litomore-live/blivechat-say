@@ -11,28 +11,28 @@ export function configPath(env = process.env, home = homedir()) {
 export const defaultConfigPath = configPath();
 const defaults = JSON.parse(await readFile(new URL('../config.example.json', import.meta.url), 'utf8'));
 const speechKeys = ['voice', 'rate', 'audioDevice', 'volume'];
-const placeholders = {
-  text: ['author', 'content'],
-  enter: ['author'],
-  follow: ['author'],
-  like: ['author'],
-  superChat: ['author', 'content', 'price'],
-  paidGift: ['author', 'num', 'gift', 'price'],
-  freeGift: ['author', 'num', 'gift', 'price'],
-  member: ['author', 'num', 'unit', 'guard', 'price'],
-};
 const isObject = value => value !== null && typeof value === 'object' && !Array.isArray(value);
 
 export function validateConfig(input, platform = process.platform) {
   if (!isObject(input)) throw new Error('配置必须是 JSON 对象');
-  for (const key of Object.keys(input)) {
+  // Older configs used an empty template to turn off an event.
+  const {templates, ...settings} = input;
+  for (const key of Object.keys(settings)) {
     if (!Object.hasOwn(defaults, key)) throw new Error(`未知配置项：${key}`);
   }
-  for (const key of ['default', 'users', 'templates']) {
+  for (const key of ['default', 'users', 'templates', 'events']) {
     if (input[key] !== undefined && !isObject(input[key])) throw new Error(`${key} 必须是对象`);
   }
-  const config = {...defaults, ...input, default: {...defaults.default, ...input.default},
-    users: {...input.users}, templates: {...defaults.templates, ...input.templates}};
+  const events = {...defaults.events};
+  for (const [key, template] of Object.entries(templates ?? {})) {
+    if (!Object.hasOwn(events, key) || typeof template !== 'string') throw new Error(`无效的旧模板：${key}`);
+    events[key] = template.length > 0;
+  }
+  for (const [key, enabled] of Object.entries(settings.events ?? {})) {
+    if (!Object.hasOwn(events, key) || typeof enabled !== 'boolean') throw new Error(`无效的播报开关：${key}`);
+    events[key] = enabled;
+  }
+  const config = {...defaults, ...settings, default: {...defaults.default, ...settings.default}, users: {...settings.users}, events};
   for (const key of Object.keys(config.default)) {
     if (!speechKeys.includes(key)) throw new Error(`未知默认声音配置项：${key}`);
   }
@@ -62,12 +62,6 @@ export function validateConfig(input, platform = process.platform) {
       throw new Error('users 中每位用户必须配置非空的 voice，且只支持 voice 字段');
     }
   }
-  for (const [key, template] of Object.entries(config.templates)) {
-    if (!Object.hasOwn(placeholders, key) || typeof template !== 'string') throw new Error(`无效的模板：${key}`);
-    for (const match of template.matchAll(/\{([^{}]+)\}/gu)) {
-      if (!placeholders[key].includes(match[1])) throw new Error(`${key} 模板中存在未知占位符：${match[1]}`);
-    }
-  }
   return config;
 }
 
@@ -75,19 +69,17 @@ export async function loadConfig(path = defaultConfigPath) {
   return validateConfig(JSON.parse(await readFile(path, 'utf8')));
 }
 
-export async function validateVoices(config, getVoices) {
-  const entries = [['默认', config.default.voice], ...Object.entries(config.users).map(([author, settings]) => [`用户「${author}」的`, settings.voice])]
-    .filter(([, voice]) => voice);
-  if (!entries.length) return;
-  const available = new Set((await getVoices()).flatMap(voice => [voice.name, voice.identifier, ...voice.aliases ?? []].filter(Boolean)));
+export function validateVoices(config, catalog) {
+  const entries = [['默认', config.default.voice], ...Object.entries(config.users).map(([author, settings]) => [`用户「${author}」的`, settings.voice])];
   for (const [label, voice] of entries) {
-    if (!available.has(voice)) throw new Error(`${label}音色「${voice}」不可用，请运行 npm run voices 查看完整名称`);
+    if (voice && !catalog.has(voice)) throw new Error(`${label}音色「${voice}」不可用，请运行 npm run voices 查看完整名称`);
   }
 }
 
-export function speechOptions(config, platform = process.platform, author) {
+export function speechOptions(config, {platform = process.platform, author, catalog, language, autoSelectVoice = false} = {}) {
   const {voice, rate, audioDevice, volume} = config.default;
-  const selectedVoice = typeof author === 'string' && Object.hasOwn(config.users, author) ? config.users[author].voice : voice;
+  const preferred = typeof author === 'string' && Object.hasOwn(config.users, author) ? config.users[author].voice : voice;
+  const selectedVoice = catalog && (preferred || autoSelectVoice) ? catalog.select(preferred, language, voice) : preferred;
   const options = {skipRunningCheck: true};
   if (selectedVoice) options.voice = selectedVoice;
   if (rate !== null) options.rate = rate;

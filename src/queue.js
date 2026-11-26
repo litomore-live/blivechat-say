@@ -7,10 +7,11 @@ export class SpeechQueue {
     this.stopped = false;
   }
 
-  enqueue(text, author, {allowRepeat = false} = {}) {
+  enqueue(announcement, {allowRepeat = false} = {}) {
+    const {text} = announcement;
     if (this.stopped || (!allowRepeat && text === this.pending.at(-1)?.text)) return;
     if (this.pending.length >= this.maxQueueSize) this.pending.shift();
-    this.pending.push({text, author, allowRepeat, createdAt: this.now()});
+    this.pending.push({...announcement, allowRepeat, createdAt: this.now()});
     void this.drain();
   }
 
@@ -23,7 +24,7 @@ export class SpeechQueue {
         if (this.now() - item.createdAt > this.maxAgeSeconds * 1000) continue;
         if (!item.allowRepeat && item.text === this.lastSpokenText) continue;
         try {
-          await this.speak(item.text, item.author);
+          await this.speak(item);
           this.lastSpokenText = item.text;
         } catch (error) {
           if (!this.stopped) this.onError(error);
