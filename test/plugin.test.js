@@ -35,7 +35,10 @@ test('combines separately detected name and body languages for each announcement
   ]) {
     const message = danmaku(content);
     message.data[2] = author;
-    assert.deepEqual(formatMessage(message, config), {text, language, author});
+    const announcement = formatMessage(message, config);
+    assert.equal(announcement.text, text);
+    assert.equal(announcement.language, language);
+    assert.equal(announcement.author, author);
   }
   for (const [author, language, text] of [
     ['一果Old', 'zh', '一果Old进入了直播间'],
@@ -242,6 +245,40 @@ test('skips stale speech waiting behind a long utterance', async () => {
   await nextTurn();
   assert.deepEqual(spoken, ['first']);
   await queue.stop();
+});
+
+test('reads only the body of consecutive chat from the same speaker in the same room', async () => {
+  const config = validateConfig({maxQueueSize: 20, maxLength: 8, default: {voice: 'Meijia'}});
+  const catalog = createVoiceCatalog([{name: 'Meijia', languageCode: 'zh_TW'}, {name: 'Kyoko', languageCode: 'ja_JP'}]);
+  const spoken = [];
+  const queue = new SpeechQueue({...config, speak: item => speakAnnouncement(item, {
+    config, catalog, say: (text, {voice}) => spoken.push([text, voice]),
+  })});
+  function chat(body, uid = '1', roomId = 123, author = '小明') {
+    const message = danmaku(body, {roomId});
+    message.data[2] = author;
+    message.data[16] = uid;
+    queue.enqueue(formatMessage(message, config));
+  }
+  chat('大家好');
+  chat('こんにちは');
+  chat('こんにちは');
+  chat('一二三四五六七八九');
+  chat('一二三四五六七九十');
+  chat('你好', '2', 123, '小红');
+  chat('回来啦');
+  chat('回来啦', '3');
+  chat('回来啦', '3', 456);
+  queue.enqueue(formatMessage({cmd: Command.LIKE, data: {authorName: '小明'}}, config));
+  chat('谢谢', '3', 456);
+  await nextTurn();
+  assert.deepEqual(spoken, [
+    ['小明说，大家好', 'Meijia'], ['こんにちは', 'Kyoko'],
+    ['一二三四五六七八…', 'Meijia'], ['一二三四五六七九…', 'Meijia'],
+    ['小红说，你好', 'Meijia'], ['小明说，回来啦', 'Meijia'],
+    ['小明说，回来啦', 'Meijia'], ['小明说，回来啦', 'Meijia'],
+    ['小明点赞了直播间', 'Meijia'], ['小明说，谢谢', 'Meijia'],
+  ]);
 });
 
 async function mockConnection(t, options = {}) {

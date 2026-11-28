@@ -72,7 +72,9 @@ export function formatMessage(message, config) {
 
   const nameText = cleanText(String(author ?? ''), config.maxLength);
   const nameLanguage = detectLanguage(nameText, {isName: true});
-  const contentLanguage = content ? detectLanguage(cleanText(content, config.maxLength)) : undefined;
+  const body = content && cleanText(content, config.maxLength);
+  if (event === 'text' && !body) return null;
+  const contentLanguage = body ? detectLanguage(body) : undefined;
   const englishEntry = event === 'enter' && nameLanguage === 'en';
   const language = englishEntry ? 'zh' : announcementLanguage(nameLanguage, contentLanguage);
   const phrases = announcements[language] ?? announcements.zh;
@@ -82,6 +84,9 @@ export function formatMessage(message, config) {
   const render = phrase => cleanText(phrase.replace(/\{(\w+)\}/gu, (_, key) => String(values[key] ?? '')), config.maxLength);
   const text = render(template);
   const announcement = {text, author, language};
+  if (event === 'text') {
+    announcement.chat = {uid: data[16] || '', roomId: message.extra?.roomId, body, language: contentLanguage ?? language};
+  }
   if (englishEntry) announcement.autoSelectVoice = true;
   if (contentLanguage && !hasLocalizedAnnouncement(contentLanguage)) {
     // Chat and Super Chat end with {content}. Keep the whole introduction together.

@@ -1,15 +1,25 @@
+function sameChatSpeaker(current, previous) {
+  return Boolean(current.chat && previous?.chat && (current.chat.uid || current.author)
+    && current.chat.uid === previous.chat.uid && current.author === previous.author && current.chat.roomId === previous.chat.roomId);
+}
+
+function isRepeat(current, previous) {
+  if (current.text !== previous?.text) return false;
+  if (!current.chat && !previous.chat) return true;
+  return sameChatSpeaker(current, previous) && current.chat.body === previous.chat.body;
+}
+
 export class SpeechQueue {
   constructor({speak, cancel, maxQueueSize, maxAgeSeconds, onError = console.error, now = Date.now}) {
     Object.assign(this, {speak, cancel, maxQueueSize, maxAgeSeconds, onError, now});
     this.pending = [];
-    this.lastSpokenText = null;
+    this.lastSpoken = null;
     this.speaking = false;
     this.stopped = false;
   }
 
   enqueue(announcement, {allowRepeat = false} = {}) {
-    const {text} = announcement;
-    if (this.stopped || (!allowRepeat && text === this.pending.at(-1)?.text)) return;
+    if (this.stopped || (!allowRepeat && isRepeat(announcement, this.pending.at(-1)))) return;
     if (this.pending.length >= this.maxQueueSize) this.pending.shift();
     this.pending.push({...announcement, allowRepeat, createdAt: this.now()});
     void this.drain();
@@ -22,10 +32,13 @@ export class SpeechQueue {
       while (!this.stopped && this.pending.length) {
         const item = this.pending.shift();
         if (this.now() - item.createdAt > this.maxAgeSeconds * 1000) continue;
-        if (!item.allowRepeat && item.text === this.lastSpokenText) continue;
+        if (!item.allowRepeat && isRepeat(item, this.lastSpoken)) continue;
         try {
-          await this.speak(item);
-          this.lastSpokenText = item.text;
+          const playback = sameChatSpeaker(item, this.lastSpoken)
+            ? {...item, text: item.chat.body, language: item.chat.language, prefixPart: undefined}
+            : item;
+          await this.speak(playback);
+          this.lastSpoken = item;
         } catch (error) {
           if (!this.stopped) this.onError(error);
         }
